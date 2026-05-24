@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+.env
+
+# Node
+node_modules/
+.svelte-kit/
+.output/
+.vercel/
+build/
+
+# ML artifacts
+*.h5
+*.pkl
+*.joblib
+*.tflite
+ml/data/raw/
+ml/data/processed/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
