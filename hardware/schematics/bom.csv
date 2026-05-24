@@ -1,13 +1,15 @@
-Component,Quantity,Part Number,Est. Cost USD,Notes
-ESP32 DevKit v1,1,ESP32-WROOM-32,4.00,Main MCU
-NEO-6M GPS Module,1,NEO-6M-0-001,8.00,UART interface
-RA-02 LoRa Module (868MHz),1,AI-Thinker RA-02,5.00,SX1278 chipset
-18650 Li-Ion Cell,2,Samsung INR18650,6.00,3.7V 3000mAh each
-TP4056 Charger Module,1,TP4056,1.00,Li-Ion charging + protection
-5V 1W Solar Panel,1,Generic,3.00,Trickle charge
-5V Vibration Motor,1,Generic ERM,1.50,PWM via MOSFET
-Piezo Buzzer (active),1,Generic,0.50,Audio deterrent
-N-Channel MOSFET,2,2N7000,0.50,Motor + buzzer switching
-IP67 Enclosure,1,100×60×25mm,4.00,Waterproof housing
-LiPo connector + misc,1,Various,2.00,Wiring, resistors, caps
-Total,,,35.50,Target $150-200 with assembly + collar strap
+Component,Quantity,Notes
+ESP32 DevKit v1,1,You already have this
+NEO-6M GPS Module,1,You already have this
+Jumper wires,4,"VCC, GND, TX, RX"
+USB cable,1,Power + serial monitor
+Total hardware cost,0,Already owned!
+
+Wiring:
+NEO-6M VCC → ESP32 3.3V
+NEO-6M GND → ESP32 GND
+NEO-6M TX  → ESP32 GPIO16 (RX2)
+NEO-6M RX  → ESP32 GPIO17 (TX2)
+
+Note: Place GPS module near a window or outside for fix.
+First fix can take 1-5 minutes cold start.

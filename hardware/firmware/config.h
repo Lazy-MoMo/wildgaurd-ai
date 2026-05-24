@@ -1,35 +1,23 @@
-// WildGuard AI — ESP32 Collar Configuration
+// WildGuard AI — ESP32 + NEO-6M Only Configuration
 #pragma once
 
-// ─── GPS ───────────────────────────────────────────────
+// ─── GPS (NEO-6M via UART) ─────────────────────────────
 #define GPS_RX_PIN       16
 #define GPS_TX_PIN       17
 #define GPS_BAUD         9600
-#define GPS_POLL_MS      60000   // Read GPS every 60 seconds
+#define GPS_POLL_MS      30000   // Read GPS every 30 seconds
 
-// ─── LoRa ──────────────────────────────────────────────
-#define LORA_SCK         5
-#define LORA_MISO        19
-#define LORA_MOSI        27
-#define LORA_SS          18
-#define LORA_RST         14
-#define LORA_DIO0        26
-#define LORA_FREQ        868E6  // 868 MHz (Asia)
-#define LORA_TX_POWER    20
+// ─── WiFi ──────────────────────────────────────────────
+#define WIFI_SSID        "YOUR_SSID"
+#define WIFI_PASSWORD    "YOUR_PASSWORD"
+#define BACKEND_URL      "http://192.168.1.100:8000"  // your laptop's IP
 
-// ─── Deterrents ────────────────────────────────────────
-#define VIBRATION_PIN    32      // MOSFET gate for vibration motor
-#define BUZZER_PIN       33      // Active buzzer / speaker
+// ─── Animal Identity ───────────────────────────────────
+#define ANIMAL_ID        "ELE_001"   // change per collar
 
-// ─── Solar / Power ─────────────────────────────────────
-#define BATTERY_ADC_PIN  34      // Voltage divider → ADC
-#define SLEEP_TIMEOUT_MS 300000  // Deep sleep if no GPS fix for 5 min
+// ─── Optional cheap deterrents (comment out if not wired) ──
+// #define BUZZER_PIN    32
+// #define LED_PIN       33
 
-// ─── ML Model ──────────────────────────────────────────
-#define MODEL_ARENA_SIZE 64000   // TFLite interpreter arena (bytes)
-#define N_FEATURES       7
-#define N_CLASSES        5       // grazing|resting|moving|distress|aggressive
-
-// ─── Network ───────────────────────────────────────────
-#define GATEWAY_ADDRESS  0x01    // LoRa gateway node address
-#define MY_ADDRESS       0x10    // This collar's address (unique per unit)
+// ─── Power ─────────────────────────────────────────────
+#define LIGHT_SLEEP_BETWEEN_POLLS   // use light sleep to save battery

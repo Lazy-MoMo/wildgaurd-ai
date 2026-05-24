@@ -1,13 +1,14 @@
 """
-AlertService — persists alert, activates collar deterrents via LoRa gateway,
-sends SMS to villages, notifies rangers.
+AlertService — persists alert and sends SMS to villages.
+No LoRa: the collar just POSTs data; backend handles all intelligence.
+Alert feedback to collar is not needed — deterrents removed from hardware scope.
 """
 from datetime import datetime
 from ..models.alert import AlertCreate
 from ..database import get_db
 from .sms_service import SMSService
 
-DETERRENT_MAP = {0: "none", 1: "vibration", 2: "vibration+audio", 3: "full"}
+DETERRENT_MAP = {0: "none", 1: "watch", 2: "sms_alert", 3: "sms_alert+ranger"}
 
 class AlertService:
     def __init__(self):
@@ -15,27 +16,22 @@ class AlertService:
 
     async def dispatch(self, alert: AlertCreate) -> dict:
         db = get_db()
-        deterrent = DETERRENT_MAP.get(alert.alert_level, "none")
+        action = DETERRENT_MAP.get(alert.alert_level, "none")
 
         doc = {
             **alert.model_dump(),
             "timestamp": datetime.utcnow(),
-            "deterrent_activated": deterrent,
+            "action": action,
             "resolved": False,
         }
         result = await db.alerts.insert_one(doc)
 
-        # Level 2+: SMS to nearby villages
         if alert.alert_level >= 2:
             for village in alert.villages_notified:
                 await self.sms.send(village, alert.animal_id, alert.risk_score)
 
-        # Level 3: ranger notification
         if alert.alert_level == 3:
-            # TODO: send push notification to ranger mobile app
+            # TODO: push notification to ranger mobile app / WhatsApp
             pass
 
-        # TODO: send deterrent command to collar via LoRa MQTT topic
-        # mqtt_client.publish(f"collar/{alert.animal_id}/deterrent", deterrent)
-
-        return {"alert_id": str(result.inserted_id), "deterrent": deterrent}
+        return {"alert_id": str(result.inserted_id), "action": action}
