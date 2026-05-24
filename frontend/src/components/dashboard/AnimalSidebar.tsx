@@ -1,36 +1,46 @@
 import { useMemo, useState } from "react";
-import { Search, Battery, Signal, Heart, MapPin, AlertTriangle } from "lucide-react";
-import { ANIMALS, ALERTS, SPECIES_COLOR, type Species } from "@/lib/wildlife/data";
-import { Input } from "@/components/ui/input";
+import { AlertTriangle, MapPin, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-
-const SPECIES: ("All" | Species)[] = ["All", "Elephant", "Tiger", "Rhino"];
+import {
+  alertLevelLabel,
+  documentId,
+  formatDateTime,
+  formatSpecies,
+  isCriticalAlert,
+  type AlertItem,
+  type Animal,
+} from "@/lib/wildlife/data";
 
 interface Props {
+  animals: Animal[];
+  alerts: AlertItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
-export function AnimalSidebar({ selectedId, onSelect }: Props) {
+export function AnimalSidebar({ animals, alerts, selectedId, onSelect }: Props) {
   const [query, setQuery] = useState("");
-  const [species, setSpecies] = useState<"All" | Species>("All");
+  const species = useMemo(
+    () => ["All", ...Array.from(new Set(animals.map((animal) => animal.species).filter(Boolean)))],
+    [animals],
+  );
+  const [selectedSpecies, setSelectedSpecies] = useState("All");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return ANIMALS.filter((a) => {
-      if (species !== "All" && a.species !== species) return false;
+    return animals.filter((animal) => {
+      if (selectedSpecies !== "All" && animal.species !== selectedSpecies) return false;
       if (!q) return true;
-      return (
-        a.code.toLowerCase().includes(q) ||
-        a.name.toLowerCase().includes(q) ||
-        a.species.toLowerCase().includes(q)
-      );
+      return [animal.animal_id, animal.collar_id, animal.species, animal.herd_id]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q));
     });
-  }, [query, species]);
+  }, [animals, query, selectedSpecies]);
 
-  const recentAlerts = ALERTS.slice(0, 4);
+  const unresolvedAlerts = alerts.filter((alert) => !alert.resolved);
 
   return (
     <aside className="flex h-full flex-col gap-4 border-l border-border bg-sidebar p-4">
@@ -40,7 +50,7 @@ export function AnimalSidebar({ selectedId, onSelect }: Props) {
             ACTIVE TRACKERS
           </h2>
           <Badge variant="secondary" className="text-xs">
-            {ANIMALS.length} live
+            {animals.length}
           </Badge>
         </div>
         <div className="relative">
@@ -48,23 +58,23 @@ export function AnimalSidebar({ selectedId, onSelect }: Props) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by code (e.g. TGR-007)"
+            placeholder="Search animals"
             className="h-9 pl-8 text-sm"
           />
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
-          {SPECIES.map((s) => (
+          {species.map((item) => (
             <button
-              key={s}
-              onClick={() => setSpecies(s)}
+              key={item}
+              onClick={() => setSelectedSpecies(item)}
               className={cn(
                 "rounded-full border border-border px-2.5 py-0.5 text-[11px] transition-colors",
-                species === s
-                  ? "bg-primary text-primary-foreground border-primary"
+                selectedSpecies === item
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted",
               )}
             >
-              {s}
+              {formatSpecies(item)}
             </button>
           ))}
         </div>
@@ -72,12 +82,13 @@ export function AnimalSidebar({ selectedId, onSelect }: Props) {
 
       <ScrollArea className="-mx-2 flex-1 px-2">
         <ul className="space-y-2">
-          {filtered.map((a) => {
-            const active = a.id === selectedId;
+          {filtered.map((animal) => {
+            const active = animal.animal_id === selectedId;
+            const latestAlert = alerts.find((alert) => alert.animal_id === animal.animal_id);
             return (
-              <li key={a.id}>
+              <li key={documentId(animal, animal.animal_id)}>
                 <button
-                  onClick={() => onSelect(a.id)}
+                  onClick={() => onSelect(animal.animal_id)}
                   className={cn(
                     "w-full rounded-lg border bg-card p-3 text-left transition-all",
                     active
@@ -86,47 +97,29 @@ export function AnimalSidebar({ selectedId, onSelect }: Props) {
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: SPECIES_COLOR[a.species] }}
-                      />
-                      <div>
-                        <div className="text-sm font-semibold leading-none">{a.name}</div>
-                        <div className="mt-1 text-[11px] text-muted-foreground">
-                          {a.code} · {a.species} · {a.sex}
-                        </div>
+                    <div>
+                      <div className="text-sm font-semibold leading-none">{animal.animal_id}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {formatSpecies(animal.species)} · {animal.collar_id}
                       </div>
                     </div>
-                    {!a.insideGeofence ? (
-                      <Badge variant="destructive" className="h-5 text-[10px]">
-                        BREACH
+                    {latestAlert && (
+                      <Badge
+                        variant={isCriticalAlert(latestAlert) ? "destructive" : "secondary"}
+                        className="h-5 text-[10px]"
+                      >
+                        {alertLevelLabel(latestAlert.alert_level)}
                       </Badge>
-                    ) : a.riskScore > 60 ? (
-                      <Badge className="h-5 bg-accent text-accent-foreground text-[10px]">
-                        RISK {a.riskScore}
-                      </Badge>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">{a.lastSeen}</span>
                     )}
                   </div>
-                  <div className="mt-2 grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
+                  <div className="mt-2 grid gap-1 text-[10px] text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Heart className="h-3 w-3" />
-                      {a.heartRate}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Battery className="h-3 w-3" />
-                      {a.collarBattery}%
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Signal className="h-3 w-3" />
-                      {a.signal}%
-                    </span>
-                    <span className="flex items-center gap-1 truncate">
                       <MapPin className="h-3 w-3" />
-                      {a.behavior.slice(0, 4)}
+                      {animal.current_location
+                        ? `${animal.current_location.lat.toFixed(5)}, ${animal.current_location.lng.toFixed(5)}`
+                        : "Location unavailable"}
                     </span>
+                    <span>{formatDateTime(animal.last_seen)}</span>
                   </div>
                 </button>
               </li>
@@ -143,36 +136,44 @@ export function AnimalSidebar({ selectedId, onSelect }: Props) {
       <div className="border-t border-border pt-3">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-wide">LATEST ALERTS</h2>
-          <Badge variant="destructive" className="text-[10px]">
-            {ALERTS.filter((a) => !a.acknowledged).length} new
+          <Badge
+            variant={unresolvedAlerts.length > 0 ? "destructive" : "secondary"}
+            className="text-[10px]"
+          >
+            {unresolvedAlerts.length}
           </Badge>
         </div>
         <ul className="space-y-1.5">
-          {recentAlerts.map((al) => (
+          {alerts.slice(0, 4).map((alert) => (
             <li
-              key={al.id}
+              key={documentId(alert, `${alert.animal_id}-${alert.timestamp}`)}
               className={cn(
                 "rounded-md border border-border bg-card/60 p-2 text-[11px]",
-                al.level === "critical" && "border-destructive/60",
+                isCriticalAlert(alert) && "border-destructive/60",
               )}
             >
               <div className="flex items-center gap-1.5">
                 <AlertTriangle
                   className={cn(
                     "h-3 w-3",
-                    al.level === "critical"
-                      ? "text-destructive blink"
-                      : al.level === "warning"
-                        ? "text-accent"
-                        : "text-muted-foreground",
+                    isCriticalAlert(alert) ? "text-destructive blink" : "text-muted-foreground",
                   )}
                 />
-                <span className="font-medium">{al.animalCode}</span>
-                <span className="ml-auto text-muted-foreground">{al.timestamp}</span>
+                <span className="font-medium">{alert.animal_id}</span>
+                <span className="ml-auto text-muted-foreground">
+                  {alertLevelLabel(alert.alert_level)}
+                </span>
               </div>
-              <p className="mt-1 line-clamp-2 text-muted-foreground">{al.message}</p>
+              <p className="mt-1 line-clamp-2 text-muted-foreground">
+                Risk score {alert.risk_score ?? "unavailable"}
+              </p>
             </li>
           ))}
+          {alerts.length === 0 && (
+            <li className="rounded-md border border-border bg-card/60 p-2 text-[11px] text-muted-foreground">
+              No alerts returned by backend.
+            </li>
+          )}
         </ul>
       </div>
     </aside>
